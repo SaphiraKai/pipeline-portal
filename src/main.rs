@@ -1,8 +1,6 @@
 use std::{
     fs::File,
     io::{self, BufRead, Write},
-    path::Path,
-    process::Command,
 };
 
 use anyhow::{Context, Result};
@@ -54,15 +52,25 @@ fn main() -> Result<()> {
     let args = Args::parse();
     let channel = args.channel.unwrap_or(parent_id.to_string());
     let channel_path = channels_dir.join(&channel);
+
+    let is_writer = args.write || !args.read && atty::is(Stdout);
     //////// variable declaration //
 
-    if args.write || !args.read && atty::is(Stdout) {
-        // portal writer ////////
+    let info = |msg: &str| {
         if args.verbose {
-            eprintln!("portal [writer]: using channel {channel}");
+            if is_writer {
+                eprintln!("portal [writer]: {msg}");
+            } else {
+                eprintln!("portal [reader]: {msg}");
+            }
         }
+    };
 
+    info(&format!("using channel {channel}"));
+    if is_writer {
+        // portal writer ////////
         //? if the channel fifo doesn't exist yet, create it
+        info("channel doesn't exist yet, creating");
         if !channel_path.exists() {
             unix_named_pipe::create(&channel_path, None).context(format!(
                 "failed to create channel {}",
@@ -73,6 +81,7 @@ fn main() -> Result<()> {
         //? loop until a reader has connected to the same channel
         //NOTE: this allows you to spawn a writer first and start buffering
         //      input without it crashing
+        info("waiting for a reader to connect");
         let mut channel;
         loop {
             match unix_named_pipe::open_write(&channel_path) {
@@ -95,6 +104,7 @@ fn main() -> Result<()> {
         }
 
         //? write data from stdin into the channel
+        info("writing to portal");
         for line in std::io::stdin().lines().map(|l| l.unwrap()) {
             channel
                 .write_all((line + "\n").as_bytes())
@@ -105,12 +115,9 @@ fn main() -> Result<()> {
         //////// portal writer //
     } else {
         // portal reader ////////
-        if args.verbose {
-            eprintln!("portal [reader]: using channel {channel}");
-        }
-
         loop {
             //? loop until a writer creates the channel
+            info("waiting for channel to be created");
             while !channel_path.exists() {
                 //? poll at <=1000Hz to avoid wasting too many resources
                 std::thread::sleep(std::time::Duration::from_millis(1));
@@ -119,6 +126,7 @@ fn main() -> Result<()> {
             let channel = File::open(&channel_path).context("failed to open file for reading")?;
             let mut lines = io::BufReader::new(channel).lines().flatten();
 
+            info("reading from portal");
             if args.one_line {
                 //? read one line from the channel
                 if let Some(l) = lines.next() {
