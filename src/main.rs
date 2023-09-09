@@ -141,7 +141,10 @@ fn main() -> Result<()> {
             }
 
             if !args.ignore_disconnects {
+                info("all writers disconnected, exiting");
                 break;
+            } else {
+                info("all writers disconnected");
             }
         }
         //////// portal reader //
