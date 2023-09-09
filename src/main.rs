@@ -60,9 +60,7 @@ fn main() -> Result<()> {
         loop {
             match unix_named_pipe::open_write(&channel_path) {
                 Err(e) => {
-                    if e.raw_os_error() == Some(6) {
-                        continue;
-                    } else {
+                    if e.raw_os_error() != Some(6) {
                         Result::Err(e).context(format!(
                             "failed to open {} for writing",
                             channel_path.display()
@@ -74,8 +72,9 @@ fn main() -> Result<()> {
                     break;
                 }
             }
-            //? poll at ~100Hz to avoid wasting too many resources
-            std::thread::sleep(std::time::Duration::from_millis(10));
+
+            //? poll at <=1000Hz to avoid wasting too many resources
+            std::thread::sleep(std::time::Duration::from_millis(1));
         }
 
         //? write data from stdin into the channel
