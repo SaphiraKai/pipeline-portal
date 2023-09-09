@@ -1,4 +1,9 @@
-use std::{io::Write, process::Command};
+use std::{
+    fs::File,
+    io::{self, BufRead, Write},
+    path::Path,
+    process::Command,
+};
 
 use anyhow::{Context, Result};
 use atty::Stream::Stdout;
@@ -13,12 +18,12 @@ struct Args {
     verbose: bool,
 
     /// If reading, read one line and exit (intended for use in creating event loops)
-    #[arg(short, long, conflicts_with = "stay_connected")]
+    #[arg(short, long)]
     one_line: bool,
 
-    /// If reading, stay connected after all writers disconnect
+    /// If reading, don't exit when all writers disconnect
     #[arg(short, long)]
-    stay_connected: bool,
+    ignore_disconnects: bool,
 
     /// Name of the channel to use, defaults to the id of the parent process
     channel: Option<String>,
@@ -96,35 +101,30 @@ fn main() -> Result<()> {
             eprintln!("portal [reader]: using channel {channel}");
         }
 
-        //? loop until a writer creates the channel
         loop {
-            if channel_path.exists() {
-                break;
+            //? loop until a writer creates the channel
+            while !channel_path.exists() {
+                //? poll at <=1000Hz to avoid wasting too many resources
+                std::thread::sleep(std::time::Duration::from_millis(1));
             }
-        }
 
-        loop {
-            // i'm too high to know how to do this properly but this is fine i swear
-            //
-            // update: i'm sober and still don't know how to do this properly lmao
+            let channel = File::open(&channel_path).context("failed to open file for reading")?;
+            let mut lines = io::BufReader::new(channel).lines().flatten();
+
             if args.one_line {
                 //? read one line from the channel
-                let mut process = Command::new("head");
-                process
-                    .arg("-n1")
-                    .arg(&channel_path)
-                    .spawn()
-                    .context("subprocess exited unsuccessfully")?;
+                if let Some(l) = lines.next() {
+                    println!("{l}");
+                    break;
+                }
             } else {
                 //? read from the channel until all writers exit
-                let mut process = Command::new("cat");
-                process
-                    .arg(&channel_path)
-                    .spawn()
-                    .context("subprocess exited unsuccessfully")?;
+                for line in lines {
+                    println!("{line}");
+                }
             }
 
-            if !args.stay_connected {
+            if !args.ignore_disconnects {
                 break;
             }
         }
