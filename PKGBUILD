@@ -1,6 +1,6 @@
 # Maintainer: Saphira Kai <kai.saphira@gmail.com>
 pkgname='pipeline-portal'
-pkgver=r7.459838e
+pkgver=r10.aa474f1
 pkgrel=1
 epoch=
 pkgdesc='A simple shell scripting utility that allows you to manipulate the flow of pipelines'
@@ -8,7 +8,7 @@ arch=('x86_64')
 url='http://g.aybit.ch'
 license=('MIT')
 groups=()
-depends=('coreutils' 'glibc' 'gcc-libs' )
+depends=('glibc' 'gcc-libs' )
 makedepends=('cargo' 'git')
 checkdepends=()
 optdepends=()
