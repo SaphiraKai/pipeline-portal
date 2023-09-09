@@ -17,11 +17,11 @@ struct Args {
 }
 
 fn main() -> Result<()> {
+    // variable declaration ////////
     let dirs = BaseDirs::new().context("couldn't find valid runtime directory")?;
     let runtime_dir = dirs
         .runtime_dir()
         .context("couldn't find valid runtime directory")?;
-
     let channels_dir = runtime_dir.join("pl-portal");
 
     if !channels_dir.exists() {
@@ -33,12 +33,15 @@ fn main() -> Result<()> {
     let args = Args::parse();
     let channel = args.channel.unwrap_or(parent_id.to_string());
     let channel_path = channels_dir.join(&channel);
+    //////// variable declaration //
 
     if atty::is(Stdout) {
+        // portal writer ////////
         if args.verbose {
             eprintln!("portal [writer]: using channel {channel}");
         }
 
+        //? if the channel fifo doesn't exist yet, create it
         if !channel_path.exists() {
             unix_named_pipe::create(&channel_path, None).context(format!(
                 "failed to create channel {}",
@@ -46,6 +49,9 @@ fn main() -> Result<()> {
             ))?;
         }
 
+        //? loop until a reader has connected to the same channel
+        //NOTE: this allows you to spawn a writer first and start buffering
+        //      input without it crashing
         let mut channel;
         loop {
             match unix_named_pipe::open_write(&channel_path) {
@@ -66,6 +72,7 @@ fn main() -> Result<()> {
             }
         }
 
+        //? write data from stdin into the channel
         for line in std::io::stdin().lines().map(|l| l.unwrap()) {
             channel
                 .write_all((line + "\n").as_bytes())
@@ -73,11 +80,14 @@ fn main() -> Result<()> {
         }
 
         std::fs::remove_file(&channel_path).context("failed to remove old channel")?;
+        //////// portal writer //
     } else {
+        // portal reader ////////
         if args.verbose {
             eprintln!("portal [reader]: using channel {channel}");
         }
 
+        //? loop until a writer creates the channel
         loop {
             if channel_path.exists() {
                 break;
@@ -92,6 +102,7 @@ fn main() -> Result<()> {
             .arg(&channel_path)
             .spawn()
             .context("subprocess exited unsuccessfully")?;
+        //////// portal reader //
     }
 
     Ok(())
