@@ -1,15 +1,15 @@
 # Maintainer: Saphira Kai <kai.saphira@gmail.com>
 pkgname='pipeline-portal'
-pkgver=r2.73d3433
+pkgver=r7.459838e
 pkgrel=1
 epoch=
 pkgdesc='A simple shell scripting utility that allows you to manipulate the flow of pipelines'
 arch=('x86_64')
 url='http://g.aybit.ch'
-license=('GPLv2')
+license=('MIT')
 groups=()
-depends=('coreutils')
-makedepends=('cargo')
+depends=('coreutils' 'glibc' 'gcc-libs' )
+makedepends=('cargo' 'git')
 checkdepends=()
 optdepends=()
 provides=('portal')
@@ -54,4 +54,5 @@ check() {
 
 package() {
     install -Dm 755 "$srcdir/$pkgname/target/release/portal" "$pkgdir/usr/bin/portal"
+    install -Dm 644 "$srcdir/$pkgname/LICENSE" "$pkgdir/usr/share/licenses/pipeline-portal/LICENSE"
 }
