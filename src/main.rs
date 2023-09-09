@@ -18,7 +18,7 @@ struct Args {
 
 fn main() -> Result<()> {
     // variable declaration ////////
-    let dirs = BaseDirs::new().context("couldn't find valid runtime directory")?;
+    let dirs = BaseDirs::new().context("couldn't find valid home directory")?;
     let runtime_dir = dirs
         .runtime_dir()
         .context("couldn't find valid runtime directory")?;
@@ -70,6 +70,8 @@ fn main() -> Result<()> {
                     break;
                 }
             }
+            //? poll at ~100Hz to avoid wasting too many resources
+            std::thread::sleep(std::time::Duration::from_millis(10));
         }
 
         //? write data from stdin into the channel
