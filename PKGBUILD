@@ -1,6 +1,6 @@
 # Maintainer: Saphira Kai <kai.saphira@gmail.com>
 pkgname='pipeline-portal'
-pkgver=0
+pkgver=r2.73d3433
 pkgrel=1
 epoch=
 pkgdesc='A simple shell scripting utility that allows you to manipulate the flow of pipelines'
@@ -8,7 +8,7 @@ arch=('x86_64')
 url='http://g.aybit.ch'
 license=('GPLv2')
 groups=()
-depends=('cat')
+depends=('coreutils')
 makedepends=('cargo')
 checkdepends=()
 optdepends=()
@@ -19,14 +19,13 @@ backup=()
 options=()
 install=
 changelog=
-source=('./src/main.rs' 'Cargo.toml')
+source=("git+https://github.com/SaphiraKai/$pkgname")
 noextract=()
 sha256sums=('SKIP')
 validpgpkeys=()
 
 pkgver() {
-	mkdir -p "$pkgdir/usr/bin/"
-	cd "$pkgdir"
+	cd "$pkgname"
 	(
 		set -o pipefail
 		git describe --long 2>/dev/null | sed 's/\([^-]*-g\)/r\1/;s/-/./g' ||
@@ -34,12 +33,25 @@ pkgver() {
 	)
 }
 
-#prepare() {}
+prepare() {
+    cd "$srcdir/pipeline-portal/"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
+}
 
-#build() {}
+build() {
+    cd "$srcdir/pipeline-portal/"
+    export RUSTUP_TOOLCHAIN=stable
+    export CARGO_TARGET_DIR=target
+    cargo build --frozen --release --all-features
+}
 
-#check() {}
+check() {
+    cd "$srcdir/pipeline-portal/"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo test --frozen --all-features
+}
 
 package() {
-    install -Dm 755 './target/release/portal' "$pkgdir/usr/bin/portal"
+    install -Dm 755 "$srcdir/$pkgname/target/release/portal" "$pkgdir/usr/bin/portal"
 }
