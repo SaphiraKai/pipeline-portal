@@ -17,7 +17,15 @@ struct Args {
     #[arg(short, long)]
     verbose: bool,
 
-    /// If reading, read one line and exit (intended for use in creating event loops)
+    /// Force writing mode
+    #[arg(short, long, conflicts_with = "read")]
+    write: bool,
+
+    /// Force reading mode
+    #[arg(short, long)]
+    read: bool,
+
+    /// If reading, read one line and exit (useful for event loops)
     #[arg(short, long)]
     one_line: bool,
 
@@ -48,7 +56,7 @@ fn main() -> Result<()> {
     let channel_path = channels_dir.join(&channel);
     //////// variable declaration //
 
-    if atty::is(Stdout) {
+    if args.write || !args.read && atty::is(Stdout) {
         // portal writer ////////
         if args.verbose {
             eprintln!("portal [writer]: using channel {channel}");
