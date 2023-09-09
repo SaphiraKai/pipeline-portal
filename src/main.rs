@@ -13,8 +13,12 @@ struct Args {
     verbose: bool,
 
     /// If reading, read one line and exit (intended for use in creating event loops)
-    #[arg(short, long)]
+    #[arg(short, long, conflicts_with = "stay_connected")]
     one_line: bool,
+
+    /// If reading, stay connected after all writers disconnect
+    #[arg(short, long)]
+    stay_connected: bool,
 
     /// Name of the channel to use, defaults to the id of the parent process
     channel: Option<String>,
@@ -99,24 +103,30 @@ fn main() -> Result<()> {
             }
         }
 
-        // i'm too high to know how to do this properly but this is fine i swear
-        //
-        // update: i'm sober and still don't know how to do this properly lmao
-        if args.one_line {
-            //? read one line from the channel
-            let mut process = Command::new("head");
-            process
-                .arg("-n1")
-                .arg(&channel_path)
-                .spawn()
-                .context("subprocess exited unsuccessfully")?;
-        } else {
-            //? read from the channel until all writers exit
-            let mut process = Command::new("cat");
-            process
-                .arg(&channel_path)
-                .spawn()
-                .context("subprocess exited unsuccessfully")?;
+        loop {
+            // i'm too high to know how to do this properly but this is fine i swear
+            //
+            // update: i'm sober and still don't know how to do this properly lmao
+            if args.one_line {
+                //? read one line from the channel
+                let mut process = Command::new("head");
+                process
+                    .arg("-n1")
+                    .arg(&channel_path)
+                    .spawn()
+                    .context("subprocess exited unsuccessfully")?;
+            } else {
+                //? read from the channel until all writers exit
+                let mut process = Command::new("cat");
+                process
+                    .arg(&channel_path)
+                    .spawn()
+                    .context("subprocess exited unsuccessfully")?;
+            }
+
+            if !args.stay_connected {
+                break;
+            }
         }
         //////// portal reader //
     }
